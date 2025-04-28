@@ -1,43 +1,49 @@
-# unifed_client.py
+# File: unifed_client.py
 import argparse
 import flwr as fl
-from model import create_model  # 你自己的模型定义
-from utils import compute_rci, compute_dfs
+from config.experiment_config import ExperimentConfig
+from utils.resource_monitor import ResourceMonitor
+from utils.utils import compute_rci, compute_dfs
 
 class UniFedClient(fl.client.NumPyClient):
-    def __init__(self, cid, train_data, test_data, config):
-        # 保存 cid, 数据, config（RCI 初值、超参等）
-        pass
+    def __init__(self, cid, train, test, cfg):
+        self.cid = cid
+        self.train = train
+        self.test = test
+        self.cfg = cfg
+        # 初始化模型
+        # self.model = create_model()
 
     def get_parameters(self):
-        # 返回当前模型参数
-        pass
+        # 从模型中提取参数
+        return []
 
     def fit(self, parameters, config):
-        # 1. 更新模型到 parameters
-        # 2. 测量 C, M, E, B → RCI, DFS
-        # 3. 本地训练 E_i 轮
-        # 4. 计算软标签 p_i, Δ_i 上报 metrics 和 model_diff
-        return model_parameters, len(train_data), {"RCI": rci, "soft_labels": p_i, ...}
+        # 更新模型
+        monitor = ResourceMonitor()
+        monitor.start_monitoring()
+        # 执行本地训练轮次
+        # TODO: 根据 RCI 计算 Ei
+        metrics = monitor.get_measurements()
+        # 计算 RCI, DFS
+        # TODO: compute_rci, compute_dfs
+        return parameters, len(self.train), {"client_id": self.cid, **metrics}
 
     def evaluate(self, parameters, config):
-        # 本地测试，返回 loss, metric, e.g. accuracy
-        return loss, len(test_data), {"accuracy": acc}
+        # 本地评估
+        loss, acc = 0.0, 0.0
+        return loss, len(self.test), {"accuracy": acc}
 
-def main():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--client-id", type=int)
     parser.add_argument("--data", type=str)
     parser.add_argument("--config-path", type=str, default="clients_config.json")
     args = parser.parse_args()
 
-    # 1. 读取 clients_config.json 拿到本客户端初始资源
-    # 2. 加载对应数据切片 train/test
-    # 3. create UniFedClient 并启动
-    fl.client.start_numpy_client(
-        server_address="127.0.0.1:8080",
-        client=UniFedClient(...),
-    )
+    cfg = ExperimentConfig()
+    # TODO: 加载并切分数据
+    train, test = None, None
 
-if __name__ == "__main__":
-    main()
+    client = UniFedClient(args.client_id, train, test, cfg)
+    fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client)
