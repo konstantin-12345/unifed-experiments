@@ -1,1 +1,6 @@
-
+flwr
+torch
+torchvision
+psutil
+numpy
+scipy
